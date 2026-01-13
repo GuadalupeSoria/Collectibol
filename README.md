@@ -2,8 +2,11 @@
 -Instalación
 
 git clone https://github.com/GuadalupeSoria/Collectibol.git
+
 cd Collectibol
+
 npm install --legacy-peer-deps
+
 npm start
 
 Escanea el código QR con Expo Go en el teléfono para ejecutar la app.
