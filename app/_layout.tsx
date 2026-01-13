@@ -1,5 +1,5 @@
-import { Stack } from 'expo-router';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { Stack } from 'expo-router'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
 
 export default function RootLayout() {
   return (
@@ -13,5 +13,5 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
       </Stack>
     </SafeAreaProvider>
-  );
+  )
 }

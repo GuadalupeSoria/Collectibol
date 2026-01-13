@@ -1,11 +1,13 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, Suspense } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useSceneStore, ObjectParams } from '../store/sceneStore'
 import { animated, useSpring } from '@react-spring/three'
-import { Center, Text3D } from '@react-three/drei'
+import { Center, Text3D, useFont } from '@react-three/drei'
 
 const FONT_URL = 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/fonts/helvetiker_regular.typeface.json'
+
+useFont.preload(FONT_URL)
 
 const SoccerBall = () => {
     const meshRef = useRef<any>(null)
@@ -81,12 +83,22 @@ const SoccerBall = () => {
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
         >
-            <mesh>
+            <mesh castShadow>
                 <sphereGeometry args={[0.6, 32, 32]} />
                 <meshStandardMaterial
                     color="#ffffff"
-                    roughness={0.8}
-                    metalness={0.1}
+                    roughness={0.4}
+                    metalness={0.2}
+                />
+            </mesh>
+
+            <mesh rotation={[0, 0, 0]}>
+                <sphereGeometry args={[0.605, 15, 15]} />
+                <meshBasicMaterial
+                    color="#000000"
+                    transparent={true}
+                    opacity={0.3}
+                    wireframe={true}
                 />
             </mesh>
         </group>
@@ -138,8 +150,9 @@ const ProceduralLetter = ({
 }) => {
     const groupRef = useRef<any>(null)
     const word = 'COLLECTIBOL'
-    const index = useSceneStore.getState().objects.findIndex(obj => obj.id === params.id)
-    const char = word[index] || '?'
+    const objects = useSceneStore(state => state.objects)
+    const index = objects.findIndex(obj => obj.id === params.id)
+    const char = index !== -1 ? word[index] : '?'
 
     const [hovered, setHovered] = React.useState(false)
     const [hasAnimated, setHasAnimated] = React.useState(false)
@@ -203,7 +216,7 @@ const ProceduralLetter = ({
                 visible={false}
             >
                 <boxGeometry args={[1.5, 1.5, 1.5]} />
-                <meshBasicMaterial transparent opacity={0} />
+                <meshBasicMaterial transparent={true} opacity={0} />
             </mesh>
 
             {hovered && (
@@ -211,38 +224,35 @@ const ProceduralLetter = ({
                     <planeGeometry args={[0.8, 0.8]} />
                     <meshBasicMaterial
                         color="#4ECDC4"
-                        transparent
+                        transparent={true}
                         opacity={0.3}
                     />
                 </mesh>
             )}
 
+            {isSelected && (
+                <pointLight
+                    position={[0, 0, 1]}
+                    intensity={2}
+                    distance={4}
+                    color="#FFD700"
+                />
+            )}
+
             <Center>
                 <Text3D
                     font={FONT_URL}
-                    size={0.82}
-                    height={0.31}
-                >
-                    {char}
-                    <meshBasicMaterial
-                        color="#4ECDC4"
-                        transparent
-                        opacity={0.4}
-                        wireframe={true}
-                    />
-                </Text3D>
-            </Center>
-            <Center>
-                <Text3D
-                    font={FONT_URL}
-                    size={0.8}
+                    size={1.0}
                     height={0.3}
                 >
                     {char}
-                    <meshStandardMaterial
+                    <meshPhongMaterial
                         color={isSelected ? '#FFD700' : params.color}
-                        metalness={isSelected ? 0.3 : 0.2}
-                        roughness={isSelected ? 0.3 : params.roughness}
+                        shininess={100}
+                        emissive={isSelected ? '#FFD700' : '#000000'}
+                        emissiveIntensity={isSelected ? 0.5 : 0}
+                        transparent={true}
+                        opacity={1}
                     />
                 </Text3D>
             </Center>
@@ -253,26 +263,27 @@ const ProceduralLetter = ({
 const Goal = () => {
     return (
         <group position={[0, 0, -5]}>
-            <mesh position={[0, 1.5, 0.3]}>
+            <mesh position={[0, 0, 0.3]}>
                 <planeGeometry args={[6, 3, 16, 6]} />
                 <meshBasicMaterial
                     color="#ffffff"
                     wireframe={true}
+                    transparent={true}
                     opacity={0.8}
                 />
             </mesh>
 
-            <mesh position={[-3, 1.5, 0.5]}>
+            <mesh position={[-3, 0, 0.5]}>
                 <cylinderGeometry args={[0.08, 0.08, 3, 16]} />
                 <meshStandardMaterial color="#ffffff" metalness={0.5} roughness={0.2} />
             </mesh>
 
-            <mesh position={[3, 1.5, 0.5]}>
+            <mesh position={[3, 0, 0.5]}>
                 <cylinderGeometry args={[0.08, 0.08, 3, 16]} />
                 <meshStandardMaterial color="#ffffff" metalness={0.5} roughness={0.2} />
             </mesh>
 
-            <mesh position={[0, 3, 0.5]} rotation={[0, 0, Math.PI / 2]}>
+            <mesh position={[0, 1.5, 0.5]} rotation={[0, 0, Math.PI / 2]}>
                 <cylinderGeometry args={[0.08, 0.08, 6, 16]} />
                 <meshStandardMaterial color="#ffffff" metalness={0.5} roughness={0.2} />
             </mesh>
@@ -309,14 +320,14 @@ export const GoalScene = () => {
         event.stopPropagation()
         const point = event.point
         const targetX = Math.max(-2.8, Math.min(2.8, point.x))
-        const targetY = Math.max(0.5, Math.min(2.8, point.y))
+        const targetY = Math.max(0.2, Math.min(2.8, point.y))
         shootBall([targetX, targetY, -5])
     }
 
     return (
         <group>
             <mesh
-                position={[0, 1.5, -5]}
+                position={[0, 0, -5]}
                 rotation={[0, 0, 0]}
                 onClick={handleGoalTouch}
                 onPointerDown={handleGoalTouch}
@@ -326,7 +337,7 @@ export const GoalScene = () => {
                 <meshBasicMaterial transparent opacity={0} />
             </mesh>
 
-            <group position={[0, 1.5, -5]}>
+            <group position={[0, 0, -5]}>
                 <lineSegments>
                     <edgesGeometry attach="geometry" args={[new THREE.PlaneGeometry(6, 3)]} />
                     <lineBasicMaterial attach="material" color="#4ECDC4" opacity={0.3} transparent />
@@ -337,12 +348,13 @@ export const GoalScene = () => {
             <SoccerBall />
 
             {objects.map((obj) => (
-                <ProceduralLetter
-                    key={obj.id}
-                    params={obj}
-                    isSelected={obj.id === selectedObjectId}
-                    onSelect={() => selectObject(obj.id)}
-                />
+                <Suspense key={obj.id} fallback={null}>
+                    <ProceduralLetter
+                        params={obj}
+                        isSelected={obj.id === selectedObjectId}
+                        onSelect={() => selectObject(obj.id)}
+                    />
+                </Suspense>
             ))}
         </group>
     )

@@ -85,6 +85,11 @@ export const Scene3D = () => {
         />
       </mesh>
 
+      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 4]} position={[0, -1.99, 0]}>
+        <ringGeometry args={[9.9, 10, 4]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+
 
       <color attach="background" args={['#0a0a1a']} />
 

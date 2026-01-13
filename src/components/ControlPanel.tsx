@@ -1,18 +1,21 @@
-import React, { useEffect } from 'react'
-import { View, TouchableOpacity, Text, StyleSheet, Animated } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { View, TouchableOpacity, Text, StyleSheet, Animated, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useSceneStore } from '../store/sceneStore'
 
 export const ControlPanel = () => {
-    const { clearAllObjects, objects, selectedObjectId, selectObject } = useSceneStore()
-    const [isMinimized, setIsMinimized] = React.useState(true)
-    const [isProcessing, setIsProcessing] = React.useState(false)
-    const slideAnim = React.useRef(new Animated.Value(0)).current
+    const { clearAllObjects, objects, selectedObjectId, selectObject, lastCardAccepted, setLastCardAccepted } = useSceneStore()
+    const [isMinimized, setIsMinimized] = useState(true)
+    const [isProcessing, setIsProcessing] = useState(false)
+    const [showVictoryModal, setShowVictoryModal] = useState(false)
+    const slideAnim = useRef(new Animated.Value(0)).current
+    const modalFadeAnim = useRef(new Animated.Value(0)).current
 
     const handleClearAll = async () => {
         if (isProcessing) return
         setIsProcessing(true)
         clearAllObjects()
+        setShowVictoryModal(false)
         setTimeout(() => setIsProcessing(false), 300)
     }
 
@@ -22,6 +25,18 @@ export const ControlPanel = () => {
     }
 
     const selectedObject = objects.find(obj => obj.id === selectedObjectId)
+
+    useEffect(() => {
+        if (objects.length === 11 && lastCardAccepted && !showVictoryModal) {
+            setShowVictoryModal(true)
+            setLastCardAccepted(false)
+            Animated.timing(modalFadeAnim, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+            }).start()
+        }
+    }, [objects.length, lastCardAccepted])
 
     useEffect(() => {
         if (selectedObjectId && isMinimized) {
@@ -58,60 +73,92 @@ export const ControlPanel = () => {
     })
 
     return (
-        <SafeAreaView edges={['bottom']} style={styles.container}>
-            <Animated.View style={[styles.panel, { transform: [{ translateY }] }]}>
-                <TouchableOpacity
-                    style={styles.toggleButton}
-                    onPress={togglePanel}
-                    activeOpacity={0.7}
-                >
-                    <Text style={styles.toggleIcon}>{isMinimized ? '▲' : '▼'}</Text>
-                </TouchableOpacity>
-
-                <View style={styles.header}>
-                    <Text style={styles.title}>⚽ COLLECTIBOL</Text>
-                    <Text style={styles.counter}>Letras: {objects.length} / 11</Text>
-                </View>
-
-                <View style={styles.info}>
-                    <Text style={styles.infoText}>
-                        Toca en el arco o pelota para disparar • Toca letras para seleccionarlas
-                    </Text>
-
-                    {selectedObject && (
-                        <View style={styles.selectedInfo}>
-                            <View style={styles.selectedHeader}>
-                                <Text style={styles.selectedTitle}>Letra seleccionada:</Text>
-                                <TouchableOpacity
-                                    onPress={handleDeselectLetter}
-                                    style={styles.deselectButton}
-                                    activeOpacity={0.7}
-                                >
-                                    <Text style={styles.deselectButtonText}>✕</Text>
-                                </TouchableOpacity>
-                            </View>
-                            <Text style={styles.selectedDetail}>ID: {selectedObject.id}</Text>
-                            <Text style={styles.selectedDetail}>Color: {selectedObject.color}</Text>
-                            <Text style={styles.selectedDetail}>Escala: {selectedObject.scale.join(', ')}</Text>
-                            <Text style={styles.selectedDetail}>Animación: {selectedObject.animationType || 'ninguna'}</Text>
-                            <Text style={styles.selectedDetail}>Metalness: {selectedObject.metalness}</Text>
-                            <Text style={styles.selectedDetail}>Roughness: {selectedObject.roughness}</Text>
-                        </View>
-                    )}
-                </View>
-
-                {objects.length > 0 && (
-                    <TouchableOpacity
-                        style={[styles.button, styles.dangerButton, isProcessing && styles.disabledButton]}
-                        onPress={handleClearAll}
-                        activeOpacity={0.7}
-                        disabled={isProcessing}
+        <>
+            <Modal
+                transparent={true}
+                visible={showVictoryModal}
+                animationType="none"
+                onRequestClose={() => setShowVictoryModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <Animated.View
+                        style={[
+                            styles.modalContent,
+                            { opacity: modalFadeAnim }
+                        ]}
                     >
-                        <Text style={styles.buttonText}>{isProcessing ? '...' : 'Reiniciar Juego'}</Text>
+                        <Text style={styles.victoryEmoji}>🏆</Text>
+                        <Text style={styles.victoryTitle}>¡GANASTE!</Text>
+                        <Text style={styles.victorySubtitle}>Completaste COLLECTIBOL</Text>
+                        <Text style={styles.victoryMessage}>
+                            Has recolectado las 11 letras
+                        </Text>
+                        <TouchableOpacity
+                            style={styles.victoryButton}
+                            onPress={handleClearAll}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.victoryButtonText}>Jugar de Nuevo</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </View>
+            </Modal>
+
+            <SafeAreaView edges={['bottom']} style={styles.container}>
+                <Animated.View style={[styles.panel, { transform: [{ translateY }] }]}>
+                    <TouchableOpacity
+                        style={styles.toggleButton}
+                        onPress={togglePanel}
+                        activeOpacity={0.7}
+                    >
+                        <Text style={styles.toggleIcon}>{isMinimized ? '▲' : '▼'}</Text>
                     </TouchableOpacity>
-                )}
-            </Animated.View>
-        </SafeAreaView>
+
+                    <View style={styles.header}>
+                        <Text style={styles.title}>⚽ COLLECTIBOL</Text>
+                        <Text style={styles.counter}>Letras: {objects.length} / 11</Text>
+                    </View>
+
+                    <View style={styles.info}>
+                        <Text style={styles.infoText}>
+                            Toca en el arco o pelota para disparar • Toca letras para seleccionarlas
+                        </Text>
+
+                        {selectedObject && (
+                            <View style={styles.selectedInfo}>
+                                <View style={styles.selectedHeader}>
+                                    <Text style={styles.selectedTitle}>Letra seleccionada:</Text>
+                                    <TouchableOpacity
+                                        onPress={handleDeselectLetter}
+                                        style={styles.deselectButton}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={styles.deselectButtonText}>✕</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <Text style={styles.selectedDetail}>ID: {selectedObject.id}</Text>
+                                <Text style={styles.selectedDetail}>Color: {selectedObject.color}</Text>
+                                <Text style={styles.selectedDetail}>Escala: {selectedObject.scale.join(', ')}</Text>
+                                <Text style={styles.selectedDetail}>Animación: {selectedObject.animationType || 'ninguna'}</Text>
+                                <Text style={styles.selectedDetail}>Metalness: {selectedObject.metalness}</Text>
+                                <Text style={styles.selectedDetail}>Roughness: {selectedObject.roughness}</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    {objects.length > 0 && (
+                        <TouchableOpacity
+                            style={[styles.button, styles.dangerButton, isProcessing && styles.disabledButton]}
+                            onPress={handleClearAll}
+                            activeOpacity={0.7}
+                            disabled={isProcessing}
+                        >
+                            <Text style={styles.buttonText}>{isProcessing ? '...' : 'Reiniciar Juego'}</Text>
+                        </TouchableOpacity>
+                    )}
+                </Animated.View>
+            </SafeAreaView>
+        </>
     )
 }
 
@@ -185,7 +232,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     dangerButton: {
-        backgroundColor: '#E56B6F',
+        marginTop: 10,
+        backgroundColor: '#e6e6e6ff',
     },
     disabledButton: {
         opacity: 0.5,
@@ -241,5 +289,63 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: '#ddd',
         marginVertical: 2,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: '#0a0a1a',
+        borderRadius: 20,
+        padding: 40,
+        alignItems: 'center',
+        borderWidth: 3,
+        borderColor: '#4ECDC4',
+        shadowColor: '#4ECDC4',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.8,
+        shadowRadius: 20,
+        minWidth: 300,
+    },
+    victoryEmoji: {
+        fontSize: 80,
+        marginBottom: 20,
+    },
+    victoryTitle: {
+        fontSize: 36,
+        fontWeight: 'bold',
+        color: '#4ECDC4',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    victorySubtitle: {
+        fontSize: 20,
+        fontWeight: '600',
+        color: '#fff',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    victoryMessage: {
+        fontSize: 16,
+        color: '#ccc',
+        marginBottom: 30,
+        textAlign: 'center',
+    },
+    victoryButton: {
+        backgroundColor: '#4ECDC4',
+        paddingVertical: 15,
+        paddingHorizontal: 40,
+        borderRadius: 12,
+        shadowColor: '#4ECDC4',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
+    },
+    victoryButtonText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#0a0a1a',
     },
 })

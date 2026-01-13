@@ -21,6 +21,7 @@ interface SceneState {
     selectedObjectId: string | null
     shotCount: number
     touchTarget: [number, number, number] | null
+    lastCardAccepted: boolean
     addObject: (obj: ObjectParams) => void
     removeObject: (id: string) => void
     clearAllObjects: () => void
@@ -28,6 +29,7 @@ interface SceneState {
     updateObject: (id: string, updates: Partial<ObjectParams>) => void
     shootBall: (target: [number, number, number]) => void
     setTouchTarget: (target: [number, number, number] | null) => void
+    setLastCardAccepted: (accepted: boolean) => void
 }
 
 export const useSceneStore = create<SceneState>()(
@@ -37,6 +39,7 @@ export const useSceneStore = create<SceneState>()(
             selectedObjectId: null,
             shotCount: 0,
             touchTarget: null,
+            lastCardAccepted: false,
 
             setTouchTarget: (target) => {
                 set({ touchTarget: target })
@@ -63,7 +66,7 @@ export const useSceneStore = create<SceneState>()(
             },
 
             clearAllObjects: () => {
-                set({ objects: [], selectedObjectId: null })
+                set({ objects: [], selectedObjectId: null, lastCardAccepted: false })
             },
 
             selectObject: (id) => {
@@ -76,22 +79,29 @@ export const useSceneStore = create<SceneState>()(
                         obj.id === id ? { ...obj, ...updates } : obj
                     )
                 }))
+            },
+
+            setLastCardAccepted: (accepted) => {
+                set({ lastCardAccepted: accepted })
             }
         }),
         {
             name: 'scene-storage',
             storage: createJSONStorage(() => AsyncStorage),
+            skipHydration: false,
             partialize: (state) => ({
                 objects: state.objects,
                 shotCount: state.shotCount,
             }),
             onRehydrateStorage: () => (state) => {
                 if (state && state.objects.length > 0) {
-                    state.objects = state.objects.map((obj) => ({
-                        ...obj,
-                        position: [0, 4, -5] as [number, number, number],
-                        createdAt: Date.now(),
-                    }))
+                    setTimeout(() => {
+                        state.objects = state.objects.map((obj) => ({
+                            ...obj,
+                            position: [0, 4, -5] as [number, number, number],
+                            createdAt: Date.now(),
+                        }))
+                    }, 100)
                 }
             },
         }
